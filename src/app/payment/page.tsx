@@ -4,13 +4,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, TrendingUp, CreditCard, Shield, Lock, X } from "lucide-react";
+import { CheckCircle, TrendingUp, CreditCard, Shield, Lock, X, Clock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function Payment() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(10 * 60); // 10 minutes in seconds
+  const [timerExpired, setTimerExpired] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -21,6 +23,25 @@ export default function Payment() {
       return;
     }
   }, [router]);
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (timeLeft > 0 && !timerExpired) {
+      const timer = setTimeout(() => {
+        setTimeLeft(timeLeft - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (timeLeft === 0) {
+      setTimerExpired(true);
+    }
+  }, [timeLeft, timerExpired]);
+
+  // Format time display
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -68,6 +89,40 @@ export default function Payment() {
             Get your personalized analysis with charts, recommendations, and action items.
           </p>
         </div>
+
+        {/* Limited-Time Offer Timer */}
+        <Card className="bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-xl border-0 mb-6">
+          <CardContent className="p-6 text-center">
+            {!timerExpired ? (
+              <>
+                <div className="flex items-center justify-center mb-3">
+                  <span className="text-2xl mr-2">🎯</span>
+                  <h3 className="text-xl font-bold">Limited-Time Offer!</h3>
+                </div>
+                <p className="text-lg mb-4">
+                  The price was <span className="line-through text-blue-200">$9.99</span>, now only <span className="font-bold text-2xl">$1.99</span>
+                </p>
+                <div className="flex items-center justify-center space-x-2 mb-2">
+                  <Clock className="h-5 w-5" />
+                  <span className="text-lg font-semibold">Offer ends in:</span>
+                </div>
+                <div className="text-3xl font-bold text-yellow-300">
+                  {formatTime(timeLeft)}
+                </div>
+              </>
+            ) : (
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-3">
+                  <Clock className="h-6 w-6 mr-2" />
+                  <h3 className="text-xl font-bold">Special Offer Expired</h3>
+                </div>
+                <p className="text-blue-100">
+                  This special offer has expired — please refresh to check current availability.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Payment Card */}
         <Card className="bg-white shadow-2xl border-0 mb-8">
@@ -137,6 +192,36 @@ export default function Payment() {
                 </div>
               )}
             </Button>
+
+            {/* Contact Options */}
+            <div className="border-t border-gray-200 pt-6">
+              <h4 className="text-center text-lg font-semibold text-gray-900 mb-4">
+                Need Help? Contact Us:
+              </h4>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-green-500 text-green-600 hover:bg-green-50"
+                  onClick={() => window.open('https://wa.me/16472232622?text=Hi%21%20I%E2%80%99d%20like%20to%20learn%20more%20about%20how%20I%20can%20improve%20my%20financial%20well-being.', '_blank')}
+                >
+                  WhatsApp
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 border-blue-500 text-blue-600 hover:bg-blue-50"
+                  onClick={() => window.open('mailto:pachecolais21@gmail.com', '_blank')}
+                >
+                  Send Email
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 border-purple-500 text-purple-600 hover:bg-purple-50"
+                  onClick={() => window.open('https://calendly.com/pachecolais21/new-meeting', '_blank')}
+                >
+                  Book Meeting
+                </Button>
+              </div>
+            </div>
 
             {/* Security Notice */}
             <div className="text-center text-sm text-gray-500 pt-4">

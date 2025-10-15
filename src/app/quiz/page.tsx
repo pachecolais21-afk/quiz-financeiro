@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, ArrowRight, TrendingUp, Lock } from "lucide-react";
+import { ArrowLeft, ArrowRight, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QUIZ_QUESTIONS, PAYWALL_QUESTION, PAYWALL_COPY } from "@/lib/constants";
@@ -215,24 +215,6 @@ export default function Quiz() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Paywall Preview - Show when approaching end */}
-        {currentQuestion >= filteredQuestions.length - 3 && (
-          <Card className="mt-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-xl border-0">
-            <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center mb-4">
-                <Lock className="h-8 w-8 text-blue-200" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Almost Done!</h3>
-              <p className="text-blue-100 mb-4">
-                {PAYWALL_COPY}
-              </p>
-              <div className="text-sm text-blue-200">
-                Next: Complete payment to unlock your full report
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Help Text */}
         <div className="text-center mt-8">
