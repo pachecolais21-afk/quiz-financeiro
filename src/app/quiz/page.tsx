@@ -58,10 +58,13 @@ export default function Quiz() {
         // Calculate user score (simple calculation for demo)
         const userScore = Math.floor(Math.random() * 40) + 60; // Random score between 60-100
         
-        console.log('Quiz completed, redirecting to results with score:', userScore);
+        // Store user score for checkout
+        localStorage.setItem('userScore', userScore.toString());
         
-        // Redirect to results page with score and paid=false
-        router.push(`/results?score=${userScore}&paid=false`);
+        console.log('Quiz completed, redirecting to checkout with score:', userScore);
+        
+        // Redirect to checkout page with score
+        router.push(`/checkout?score=${userScore}`);
         return;
       }
 

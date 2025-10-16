@@ -30,16 +30,43 @@ function ResultsContent() {
     console.log('Component mounted, checking payment status...');
     
     const paidParam = searchParams.get('paid');
+    const sessionId = searchParams.get('session_id');
+    
     if (paidParam === 'true') {
-      console.log('Payment verified, loading results...');
+      console.log('Payment verified via URL parameter, loading results...');
       setIsPaid(true);
       loadQuizResults();
+    } else if (sessionId) {
+      console.log('Session ID found, verifying payment with Stripe...');
+      verifyStripePayment(sessionId);
     } else {
       console.log('Payment not verified, redirecting to checkout...');
       // Redirect to checkout/payment page if not paid
-      window.location.href = '/checkout';
+      const score = searchParams.get('score') || localStorage.getItem('userScore') || '75';
+      window.location.href = `/checkout?score=${score}`;
     }
   }, [searchParams]);
+
+  const verifyStripePayment = async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/verify-payment?session_id=${sessionId}`);
+      const data = await response.json();
+      
+      if (data.paid) {
+        console.log('Payment verified via Stripe API, loading results...');
+        setIsPaid(true);
+        loadQuizResults();
+      } else {
+        console.log('Payment not confirmed, redirecting to checkout...');
+        const score = searchParams.get('score') || localStorage.getItem('userScore') || '75';
+        window.location.href = `/checkout?score=${score}`;
+      }
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      const score = searchParams.get('score') || localStorage.getItem('userScore') || '75';
+      window.location.href = `/checkout?score=${score}`;
+    }
+  };
 
   const loadQuizResults = () => {
     // Get quiz answers from localStorage
