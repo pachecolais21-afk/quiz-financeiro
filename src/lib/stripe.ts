@@ -19,8 +19,8 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 // Configurações do produto
 export const STRIPE_CONFIG = {
-  // Preço do relatório financeiro
-  PRICE_ID: 'price_1QVqGhJNcmPXDjHHvLZoQzQs', // Substitua pelo seu Price ID real
+  // Preço do relatório financeiro (usando o ID fornecido pelo usuário)
+  PRICE_ID: 'price_1SHtWf3NSh5b2eajZqSFaYa2',
   PRODUCT_NAME: 'Relatório Financeiro Personalizado',
   AMOUNT: 199, // $1.99 em centavos
   CURRENCY: 'cad',
@@ -30,21 +30,14 @@ export const STRIPE_CONFIG = {
   CANCEL_URL: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/checkout`,
 };
 
-// Função para criar sessão de checkout
+// Função para criar sessão de checkout usando o Price ID
 export async function createCheckoutSession(userScore: string) {
   try {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
-          price_data: {
-            currency: STRIPE_CONFIG.CURRENCY,
-            product_data: {
-              name: STRIPE_CONFIG.PRODUCT_NAME,
-              description: 'Análise completa da sua saúde financeira com gráficos, recomendações personalizadas e plano de ação.',
-            },
-            unit_amount: STRIPE_CONFIG.AMOUNT,
-          },
+          price: STRIPE_CONFIG.PRICE_ID, // Usando o Price ID fornecido
           quantity: 1,
         },
       ],
