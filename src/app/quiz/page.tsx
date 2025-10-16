@@ -52,15 +52,16 @@ export default function Quiz() {
 
       // Check if this is the last question
       if (currentQuestion === filteredQuestions.length - 1) {
-        // Store final answers and redirect directly to Stripe
+        // Store final answers
         localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
         
-        // Redirect directly to Stripe checkout with success URL
-        const successUrl = encodeURIComponent(`${window.location.origin}/results?payment_success=true`);
-        const cancelUrl = encodeURIComponent(`${window.location.origin}/payment`);
+        // Calculate user score (simple calculation for demo)
+        const userScore = Math.floor(Math.random() * 40) + 60; // Random score between 60-100
         
-        // Redirect to Stripe payment link
-        window.location.href = 'https://buy.stripe.com/aFadR23A8aO13gK93ggrS00';
+        console.log('Quiz completed, redirecting to results with score:', userScore);
+        
+        // Redirect to results page with score and paid=false
+        router.push(`/results?score=${userScore}&paid=false`);
         return;
       }
 

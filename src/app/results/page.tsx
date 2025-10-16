@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, TrendingUp, AlertTriangle, Target, Calendar, Mail, MessageCircle, Lock } from "lucide-react";
+import { CheckCircle, TrendingUp, AlertTriangle, Target, Calendar, Mail, MessageCircle, Lock, Clock } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
@@ -12,54 +12,81 @@ import { QuizAnswers, FinancialAnalysis, Recommendation } from "@/lib/types";
 import { generateFinancialAnalysis, getHealthColor, getHealthLabel } from "@/lib/financial-analysis";
 import { WHATSAPP_NUMBER, EMAIL_ADDRESS } from "@/lib/constants";
 
-export default function Results() {
+function ResultsContent() {
   const [answers, setAnswers] = useState<QuizAnswers>({});
   const [analysis, setAnalysis] = useState<FinancialAnalysis | null>(null);
-  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
+  const [offerExpired, setOfferExpired] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Get URL parameters
+  const score = searchParams.get('score');
+  const paid = searchParams.get('paid');
+
+  console.log('URL Parameters:', { score, paid });
+
   useEffect(() => {
-    const verifyPaymentAndLoadData = () => {
-      // Check if payment success parameter is present (from Stripe redirect)
-      const paymentSuccess = searchParams.get('payment_success');
-      
-      // Check if payment was previously completed (stored in localStorage)
-      const storedPaymentStatus = localStorage.getItem('paymentCompleted');
-      
-      if (paymentSuccess === 'true') {
-        // Payment just completed via Stripe redirect
-        localStorage.setItem('paymentCompleted', 'true');
-        setPaymentVerified(true);
-      } else if (storedPaymentStatus === 'true') {
-        // Payment was previously completed
-        setPaymentVerified(true);
-      } else {
-        // No payment verification found
-        setPaymentVerified(false);
-        setIsLoading(false);
-        return;
-      }
-
-      // Get quiz answers
-      const storedAnswers = localStorage.getItem('quizAnswers');
-      if (storedAnswers) {
-        const parsedAnswers = JSON.parse(storedAnswers);
-        setAnswers(parsedAnswers);
-        const analysisResult = generateFinancialAnalysis(parsedAnswers);
-        setAnalysis(analysisResult);
-      } else {
-        // No quiz answers found, redirect to quiz
-        router.push('/quiz');
-        return;
-      }
-      
+    console.log('Component mounted, checking payment status...');
+    
+    // If paid is "true", show results
+    if (paid === "true") {
+      console.log('Payment verified, loading results...');
+      loadQuizResults();
+    } else {
+      console.log('Payment not verified, showing offer page...');
       setIsLoading(false);
-    };
+      // Start countdown timer
+      startCountdownTimer();
+    }
+  }, [paid]);
 
-    verifyPaymentAndLoadData();
-  }, [router, searchParams]);
+  const loadQuizResults = () => {
+    // Get quiz answers from localStorage
+    const storedAnswers = localStorage.getItem('quizAnswers');
+    if (storedAnswers) {
+      const parsedAnswers = JSON.parse(storedAnswers);
+      setAnswers(parsedAnswers);
+      const analysisResult = generateFinancialAnalysis(parsedAnswers);
+      setAnalysis(analysisResult);
+      console.log('Results loaded successfully');
+    } else {
+      console.log('No quiz answers found, redirecting to quiz...');
+      router.push('/quiz');
+      return;
+    }
+    
+    setIsLoading(false);
+  };
+
+  const startCountdownTimer = () => {
+    console.log('Starting 10-minute countdown timer...');
+    const timer = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          console.log('Timer expired!');
+          setOfferExpired(true);
+          clearInterval(timer);
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  };
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const handleCompletePayment = () => {
+    console.log('Redirecting to Stripe payment...');
+    window.open('https://buy.stripe.com/aFadR23A8aO13gK93ggrS00', '_blank');
+  };
 
   const handleWhatsAppContact = () => {
     window.open('https://wa.me/16472232622?text=Hi%21%20I%E2%80%99d%20like%20to%20learn%20more%20about%20how%20I%20can%20improve%20my%20financial%20well-being.', '_blank');
@@ -73,24 +100,20 @@ export default function Results() {
     window.open('https://calendly.com/pachecolais21/new-meeting', '_blank');
   };
 
-  const handleCompletePayment = () => {
-    router.push('/payment');
-  };
-
   // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifying payment and loading your report...</p>
+          <p className="text-gray-600">Loading your report...</p>
         </div>
       </div>
     );
   }
 
-  // Payment not completed - show locked state
-  if (!paymentVerified) {
+  // Payment not completed - show limited-time offer
+  if (paid !== "true") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50">
         {/* Header */}
@@ -106,20 +129,37 @@ export default function Results() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <Card className="bg-white shadow-xl border-0 text-center">
             <CardContent className="p-12">
-              <div className="bg-red-100 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                <Lock className="h-12 w-12 text-red-600" />
+              <div className="bg-blue-100 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                <Lock className="h-12 w-12 text-blue-600" />
               </div>
               
               <h1 className="text-3xl font-bold text-gray-900 mb-4">
-                Payment Required
+                🎯 Limited-Time Offer!
               </h1>
               
-              <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-                Your payment has not been completed. Please finish your checkout to view your personalized financial analysis.
-              </p>
+              <div className="mb-8">
+                <div className="flex items-center justify-center space-x-4 mb-4">
+                  <span className="text-2xl text-gray-500 line-through">CA$9.99</span>
+                  <span className="text-4xl font-bold text-green-600">CA$1.99</span>
+                </div>
+                
+                {!offerExpired ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center justify-center space-x-2 text-red-700">
+                      <Clock className="h-5 w-5" />
+                      <span className="font-semibold">Offer expires in: </span>
+                      <span className="text-2xl font-bold">{formatTime(timeLeft)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-6">
+                    <span className="text-gray-600 font-semibold">Offer expired</span>
+                  </div>
+                )}
+              </div>
 
               <div className="bg-gray-50 rounded-lg p-6 mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">What you'll get after payment:</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">What you'll get:</h3>
                 <div className="grid md:grid-cols-2 gap-4 text-left">
                   <div className="flex items-center space-x-3">
                     <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
@@ -140,13 +180,19 @@ export default function Results() {
                 </div>
               </div>
               
-              <Button
-                onClick={handleCompletePayment}
-                size="lg"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                Complete Payment - $1.99
-              </Button>
+              {!offerExpired ? (
+                <Button
+                  onClick={handleCompletePayment}
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  Complete your payment - CA$1.99
+                </Button>
+              ) : (
+                <div className="text-gray-500 text-lg font-semibold">
+                  Offer expired
+                </div>
+              )}
 
               <p className="text-sm text-gray-500 mt-4">
                 Secure payment • 256-bit SSL encryption • Instant access
@@ -359,5 +405,20 @@ export default function Results() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function Results() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ResultsContent />
+    </Suspense>
   );
 }
