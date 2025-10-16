@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { CheckCircle, Clock, CreditCard, TrendingUp, ArrowLeft } from "lucide-re
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function Checkout() {
+function CheckoutContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(10 * 60); // 10 minutos em segundos
   const [userScore, setUserScore] = useState<string>("");
@@ -223,5 +223,26 @@ export default function Checkout() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Loading fallback component
+function CheckoutLoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading checkout...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function Checkout() {
+  return (
+    <Suspense fallback={<CheckoutLoadingFallback />}>
+      <CheckoutContent />
+    </Suspense>
   );
 }
