@@ -52,9 +52,15 @@ export default function Quiz() {
 
       // Check if this is the last question
       if (currentQuestion === filteredQuestions.length - 1) {
-        // Store final answers and redirect to payment
+        // Store final answers and redirect directly to Stripe
         localStorage.setItem('quizAnswers', JSON.stringify(newAnswers));
-        router.push('/payment');
+        
+        // Redirect directly to Stripe checkout with success URL
+        const successUrl = encodeURIComponent(`${window.location.origin}/results?payment_success=true`);
+        const cancelUrl = encodeURIComponent(`${window.location.origin}/payment`);
+        
+        // Redirect to Stripe payment link
+        window.location.href = 'https://buy.stripe.com/aFadR23A8aO13gK93ggrS00';
         return;
       }
 

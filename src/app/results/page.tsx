@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, TrendingUp, AlertTriangle, Target, Calendar, Mail, MessageCircle } from "lucide-react";
+import { CheckCircle, TrendingUp, AlertTriangle, Target, Calendar, Mail, MessageCircle, Lock } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { QuizAnswers, FinancialAnalysis, Recommendation } from "@/lib/types";
 import { generateFinancialAnalysis, getHealthColor, getHealthLabel } from "@/lib/financial-analysis";
@@ -15,27 +15,51 @@ import { WHATSAPP_NUMBER, EMAIL_ADDRESS } from "@/lib/constants";
 export default function Results() {
   const [answers, setAnswers] = useState<QuizAnswers>({});
   const [analysis, setAnalysis] = useState<FinancialAnalysis | null>(null);
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check if payment was completed
-    const paymentCompleted = localStorage.getItem('paymentCompleted');
-    if (!paymentCompleted) {
-      router.push('/payment');
-      return;
-    }
+    const verifyPaymentAndLoadData = () => {
+      // Check if payment success parameter is present (from Stripe redirect)
+      const paymentSuccess = searchParams.get('payment_success');
+      
+      // Check if payment was previously completed (stored in localStorage)
+      const storedPaymentStatus = localStorage.getItem('paymentCompleted');
+      
+      if (paymentSuccess === 'true') {
+        // Payment just completed via Stripe redirect
+        localStorage.setItem('paymentCompleted', 'true');
+        setPaymentVerified(true);
+      } else if (storedPaymentStatus === 'true') {
+        // Payment was previously completed
+        setPaymentVerified(true);
+      } else {
+        // No payment verification found
+        setPaymentVerified(false);
+        setIsLoading(false);
+        return;
+      }
 
-    // Get quiz answers
-    const storedAnswers = localStorage.getItem('quizAnswers');
-    if (storedAnswers) {
-      const parsedAnswers = JSON.parse(storedAnswers);
-      setAnswers(parsedAnswers);
-      const analysisResult = generateFinancialAnalysis(parsedAnswers);
-      setAnalysis(analysisResult);
-    } else {
-      router.push('/quiz');
-    }
-  }, [router]);
+      // Get quiz answers
+      const storedAnswers = localStorage.getItem('quizAnswers');
+      if (storedAnswers) {
+        const parsedAnswers = JSON.parse(storedAnswers);
+        setAnswers(parsedAnswers);
+        const analysisResult = generateFinancialAnalysis(parsedAnswers);
+        setAnalysis(analysisResult);
+      } else {
+        // No quiz answers found, redirect to quiz
+        router.push('/quiz');
+        return;
+      }
+      
+      setIsLoading(false);
+    };
+
+    verifyPaymentAndLoadData();
+  }, [router, searchParams]);
 
   const handleWhatsAppContact = () => {
     window.open('https://wa.me/16472232622?text=Hi%21%20I%E2%80%99d%20like%20to%20learn%20more%20about%20how%20I%20can%20improve%20my%20financial%20well-being.', '_blank');
@@ -49,6 +73,92 @@ export default function Results() {
     window.open('https://calendly.com/pachecolais21/new-meeting', '_blank');
   };
 
+  const handleCompletePayment = () => {
+    router.push('/payment');
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verifying payment and loading your report...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment not completed - show locked state
+  if (!paymentVerified) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <Link href="/" className="flex items-center space-x-2">
+              <TrendingUp className="h-8 w-8 text-blue-600" />
+              <span className="text-xl font-bold text-gray-900">FinanceCheck</span>
+            </Link>
+          </div>
+        </header>
+
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <Card className="bg-white shadow-xl border-0 text-center">
+            <CardContent className="p-12">
+              <div className="bg-red-100 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                <Lock className="h-12 w-12 text-red-600" />
+              </div>
+              
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                Payment Required
+              </h1>
+              
+              <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+                Your payment has not been completed. Please finish your checkout to view your personalized financial analysis.
+              </p>
+
+              <div className="bg-gray-50 rounded-lg p-6 mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">What you'll get after payment:</h3>
+                <div className="grid md:grid-cols-2 gap-4 text-left">
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Personalized financial analysis</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Interactive charts and graphs</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">3 Priority Action Items</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-gray-700">Financial health score</span>
+                  </div>
+                </div>
+              </div>
+              
+              <Button
+                onClick={handleCompletePayment}
+                size="lg"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                Complete Payment - $1.99
+              </Button>
+
+              <p className="text-sm text-gray-500 mt-4">
+                Secure payment • 256-bit SSL encryption • Instant access
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment verified - show full results
   if (!analysis) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center">

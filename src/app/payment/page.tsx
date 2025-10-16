@@ -4,13 +4,11 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, TrendingUp, CreditCard, Shield, Lock, X, Clock } from "lucide-react";
+import { CheckCircle, TrendingUp, CreditCard, Shield, Lock, Clock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function Payment() {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
   const [timeLeft, setTimeLeft] = useState(10 * 60); // 10 minutes in seconds
   const [timerExpired, setTimerExpired] = useState(false);
   const router = useRouter();
@@ -20,6 +18,13 @@ export default function Payment() {
     const storedAnswers = localStorage.getItem('quizAnswers');
     if (!storedAnswers) {
       router.push('/quiz');
+      return;
+    }
+
+    // Check if payment was already completed
+    const paymentCompleted = localStorage.getItem('paymentCompleted');
+    if (paymentCompleted === 'true') {
+      router.push('/results');
       return;
     }
   }, [router]);
@@ -43,29 +48,13 @@ export default function Payment() {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const handlePayment = async () => {
-    setIsProcessing(true);
+  const handlePayment = () => {
+    // Redirect directly to Stripe checkout with success URL
+    const successUrl = encodeURIComponent(`${window.location.origin}/results?payment_success=true`);
+    const cancelUrl = encodeURIComponent(`${window.location.origin}/payment`);
     
     // Redirect to Stripe payment link
-    window.open('https://buy.stripe.com/aFadR23A8aO13gK93ggrS00', '_blank');
-    
-    // Simulate payment completion for demo purposes
-    setTimeout(() => {
-      localStorage.setItem('paymentCompleted', 'true');
-      setIsProcessing(false);
-      setShowPopup(true);
-      
-      // Auto-close popup and redirect after 15 seconds
-      setTimeout(() => {
-        setShowPopup(false);
-        router.push('/results');
-      }, 15000);
-    }, 2000);
-  };
-
-  const handleShowReport = () => {
-    setShowPopup(false);
-    router.push('/results');
+    window.location.href = 'https://buy.stripe.com/aFadR23A8aO13gK93ggrS00';
   };
 
   return (
@@ -177,20 +166,12 @@ export default function Payment() {
             {/* Payment Button */}
             <Button
               onClick={handlePayment}
-              disabled={isProcessing}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
             >
-              {isProcessing ? (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Processing...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <CreditCard className="h-5 w-5" />
-                  <span>Check Results</span>
-                </div>
-              )}
+              <div className="flex items-center space-x-2">
+                <CreditCard className="h-5 w-5" />
+                <span>Check Results</span>
+              </div>
             </Button>
 
             {/* Contact Options */}
@@ -252,52 +233,6 @@ export default function Payment() {
           </div>
         </div>
       </div>
-
-      {/* Success Popup */}
-      {showPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="bg-white max-w-md w-full shadow-2xl border-0 relative">
-            <button
-              onClick={() => setShowPopup(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="h-6 w-6" />
-            </button>
-            
-            <CardContent className="p-8 text-center">
-              <div className="bg-green-100 p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center">
-                <CheckCircle className="h-8 w-8 text-green-600" />
-              </div>
-              
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                Payment Successful!
-              </h3>
-              
-              <p className="text-gray-600 mb-6">
-                Your personalized financial report is ready. You now have access to your complete analysis and bonus consultation.
-              </p>
-
-              {/* Bonus Revealed */}
-              <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                <div className="flex items-center justify-center space-x-2 mb-2">
-                  <span className="text-2xl">⭐️</span>
-                  <span className="font-semibold text-blue-800">Bonus Unlocked!</span>
-                </div>
-                <p className="text-blue-700 font-medium">
-                  Free meeting with a financial advisor
-                </p>
-              </div>
-              
-              <Button
-                onClick={handleShowReport}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold rounded-xl"
-              >
-                Show me my report now
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
