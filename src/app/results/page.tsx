@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, TrendingUp, AlertTriangle, Target, Calendar, Mail, MessageCircle, Lock, Clock } from "lucide-react";
+import { CheckCircle, TrendingUp, AlertTriangle, Target, Calendar, Mail, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
@@ -15,8 +15,7 @@ import { WHATSAPP_NUMBER, EMAIL_ADDRESS } from "@/lib/constants";
 function ResultsContent() {
   const [answers, setAnswers] = useState<QuizAnswers>({});
   const [analysis, setAnalysis] = useState<FinancialAnalysis | null>(null);
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
-  const [offerExpired, setOfferExpired] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,17 +29,17 @@ function ResultsContent() {
   useEffect(() => {
     console.log('Component mounted, checking payment status...');
     
-    // If paid is "true", show results
-    if (paid === "true") {
+    const paidParam = searchParams.get('paid');
+    if (paidParam === 'true') {
       console.log('Payment verified, loading results...');
+      setIsPaid(true);
       loadQuizResults();
     } else {
-      console.log('Payment not verified, showing offer page...');
-      setIsLoading(false);
-      // Start countdown timer
-      startCountdownTimer();
+      console.log('Payment not verified, redirecting to checkout...');
+      // Redirect to checkout/payment page if not paid
+      window.location.href = '/checkout';
     }
-  }, [paid]);
+  }, [searchParams]);
 
   const loadQuizResults = () => {
     // Get quiz answers from localStorage
@@ -60,34 +59,6 @@ function ResultsContent() {
     setIsLoading(false);
   };
 
-  const startCountdownTimer = () => {
-    console.log('Starting 10-minute countdown timer...');
-    const timer = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime <= 1) {
-          console.log('Timer expired!');
-          setOfferExpired(true);
-          clearInterval(timer);
-          return 0;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  };
-
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const handleCompletePayment = () => {
-    console.log('Redirecting to Stripe payment...');
-    window.open('https://buy.stripe.com/aFadR23A8aO13gK93ggrS00', '_blank');
-  };
-
   const handleWhatsAppContact = () => {
     window.open('https://wa.me/16472232622?text=Hi%21%20I%E2%80%99d%20like%20to%20learn%20more%20about%20how%20I%20can%20improve%20my%20financial%20well-being.', '_blank');
   };
@@ -100,112 +71,19 @@ function ResultsContent() {
     window.open('https://calendly.com/pachecolais21/new-meeting', '_blank');
   };
 
-  // Loading state
-  if (isLoading) {
+  // Show loading while checking payment status
+  if (!isPaid) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your report...</p>
+          <p className="text-gray-600">Checking payment status...</p>
         </div>
       </div>
     );
   }
 
-  // Payment not completed - show limited-time offer
-  if (paid !== "true") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <TrendingUp className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">FinanceCheck</span>
-            </Link>
-          </div>
-        </header>
-
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <Card className="bg-white shadow-xl border-0 text-center">
-            <CardContent className="p-12">
-              <div className="bg-blue-100 p-6 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                <Lock className="h-12 w-12 text-blue-600" />
-              </div>
-              
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">
-                🎯 Limited-Time Offer!
-              </h1>
-              
-              <div className="mb-8">
-                <div className="flex items-center justify-center space-x-4 mb-4">
-                  <span className="text-2xl text-gray-500 line-through">CA$9.99</span>
-                  <span className="text-4xl font-bold text-green-600">CA$1.99</span>
-                </div>
-                
-                {!offerExpired ? (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                    <div className="flex items-center justify-center space-x-2 text-red-700">
-                      <Clock className="h-5 w-5" />
-                      <span className="font-semibold">Offer expires in: </span>
-                      <span className="text-2xl font-bold">{formatTime(timeLeft)}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-6">
-                    <span className="text-gray-600 font-semibold">Offer expired</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-6 mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">What you'll get:</h3>
-                <div className="grid md:grid-cols-2 gap-4 text-left">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Personalized financial analysis</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Interactive charts and graphs</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">3 Priority Action Items</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                    <span className="text-gray-700">Financial health score</span>
-                  </div>
-                </div>
-              </div>
-              
-              {!offerExpired ? (
-                <Button
-                  onClick={handleCompletePayment}
-                  size="lg"
-                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  Complete your payment - CA$1.99
-                </Button>
-              ) : (
-                <div className="text-gray-500 text-lg font-semibold">
-                  Offer expired
-                </div>
-              )}
-
-              <p className="text-sm text-gray-500 mt-4">
-                Secure payment • 256-bit SSL encryption • Instant access
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // Payment verified - show full results
-  if (!analysis) {
+  // Loading state for results
+  if (isLoading || !analysis) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -216,6 +94,7 @@ function ResultsContent() {
     );
   }
 
+  // Payment verified - show full results
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50">
       {/* Header */}
