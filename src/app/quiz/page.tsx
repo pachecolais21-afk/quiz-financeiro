@@ -39,7 +39,9 @@ export default function Quiz() {
     }
   }, [currentQuestion, filteredQuestions, answers]);
 
-  const progress = ((currentQuestion + 1) / filteredQuestions.length) * 100;
+  // Calcular progresso baseado no total de questões filtradas
+  const totalQuestions = filteredQuestions.length;
+  const progress = totalQuestions > 0 ? ((currentQuestion + 1) / totalQuestions) * 100 : 0;
 
   const handleNext = () => {
     if (selectedAnswer !== "" && selectedAnswer !== null) {
@@ -165,7 +167,7 @@ export default function Quiz() {
               <span className="text-xl font-bold text-gray-900">FinanceCheck</span>
             </Link>
             <div className="text-sm text-gray-600">
-              Question {currentQuestion + 1} of {filteredQuestions.length}
+              Question {currentQuestion + 1} of {totalQuestions}
             </div>
           </div>
         </div>

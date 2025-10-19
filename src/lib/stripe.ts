@@ -25,9 +25,12 @@ export const STRIPE_CONFIG = {
   AMOUNT: 199, // $1.99 em centavos
   CURRENCY: 'cad',
   
-  // URLs de redirecionamento
-  SUCCESS_URL: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/results?paid=true&session_id={CHECKOUT_SESSION_ID}`,
-  CANCEL_URL: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/checkout`,
+  // URLs de redirecionamento - configuradas para financialcheckquiz.com
+  SUCCESS_URL: 'https://financialcheckquiz.com/results?paid=true&session_id={CHECKOUT_SESSION_ID}',
+  CANCEL_URL: 'https://financialcheckquiz.com/checkout',
+  
+  // URL do webhook - deve estar configurada no painel do Stripe
+  WEBHOOK_URL: 'https://financialcheckquiz.com/api/webhooks/stripe'
 };
 
 // Função para criar sessão de checkout usando o Price ID
@@ -47,12 +50,28 @@ export async function createCheckoutSession(userScore: string) {
       metadata: {
         userScore,
         product: 'financial_report',
+        timestamp: new Date().toISOString(),
       },
+      // Configurações adicionais para melhor experiência
+      billing_address_collection: 'auto',
+      customer_creation: 'always',
+      payment_intent_data: {
+        metadata: {
+          userScore,
+          product: 'financial_report',
+        },
+      },
+    });
+
+    console.log('✅ Checkout session created:', {
+      sessionId: session.id,
+      url: session.url,
+      userScore
     });
 
     return session;
   } catch (error) {
-    console.error('Erro ao criar sessão de checkout:', error);
+    console.error('❌ Error creating checkout session:', error);
     throw error;
   }
 }
@@ -60,14 +79,39 @@ export async function createCheckoutSession(userScore: string) {
 // Função para verificar status do pagamento
 export async function verifyPayment(sessionId: string) {
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    return {
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['payment_intent']
+    });
+    
+    const result = {
       paid: session.payment_status === 'paid',
       customerEmail: session.customer_details?.email,
       metadata: session.metadata,
+      paymentIntentId: session.payment_intent?.id,
+      amount: session.amount_total,
+      currency: session.currency,
     };
+
+    console.log('✅ Payment verification result:', {
+      sessionId,
+      paid: result.paid,
+      customerEmail: result.customerEmail
+    });
+
+    return result;
   } catch (error) {
-    console.error('Erro ao verificar pagamento:', error);
-    return { paid: false };
+    console.error('❌ Error verifying payment:', error);
+    return { paid: false, error: 'Payment verification failed' };
+  }
+}
+
+// Função para recuperar detalhes de uma sessão
+export async function getSessionDetails(sessionId: string) {
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    return session;
+  } catch (error) {
+    console.error('❌ Error retrieving session details:', error);
+    throw error;
   }
 }
